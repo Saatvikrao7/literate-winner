@@ -17,9 +17,9 @@ export default function App() {
       <Header selectedRegion={selectedRegion} />
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Map — takes remaining width on desktop, full width on mobile */}
-        <div className="flex-1 relative min-w-0">
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Map — takes remaining width; position:relative so WorldMap can use absolute inset-0 */}
+        <div className="flex-1 relative min-w-0 min-h-0">
           <WorldMap
             selectedRegion={selectedRegion}
             onRegionSelect={setSelectedRegion}
@@ -27,7 +27,7 @@ export default function App() {
         </div>
 
         {/* News panel — fixed width sidebar on desktop */}
-        <div className="w-full max-w-xs sm:max-w-sm lg:max-w-md flex-shrink-0 border-l border-border flex flex-col overflow-hidden hidden md:flex">
+        <div className="w-80 lg:w-96 flex-shrink-0 border-l border-border flex flex-col overflow-hidden hidden md:flex">
           <NewsPanel
             articles={articles}
             loading={loading}
