@@ -5,6 +5,7 @@ import { COUNTRY_REGION_MAP, REGIONS } from '../data/regions'
 import { CITIES } from '../data/cities'
 import { CONFLICT_ZONES, CONFLICT_ARCS } from '../data/events'
 import { useConflictEvents } from '../hooks/useConflictEvents'
+import { MissilesLayer } from './MissilesLayer'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
@@ -188,10 +189,9 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
       <div style="color:rgba(255,255,255,0.5);font-size:9px;margin-top:1px">${zone.detail}</div>
     </div>`, [])
 
-  // ── Missile color: transparent base → orange exhaust → bright white tip ──
-  const getMissileColor = useCallback(() =>
-    // gradient along the arc: tail fades in, nose is bright white-hot
-    ['rgba(0,0,0,0)', 'rgba(255,80,0,0)', 'rgba(255,140,0,0.6)', 'rgba(255,220,80,1)', 'rgba(255,255,220,1)']
+  // Faint trajectory path so the flight route is readable (no moving dash)
+  const getPathColor = useCallback(() =>
+    ['rgba(255,80,0,0)', 'rgba(255,80,0,0.15)', 'rgba(255,80,0,0)']
   , [])
 
   // ── Unified rings dataset: conflict zones + capital cities ───────────────
@@ -226,6 +226,8 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
+      {/* 3D missile objects injected directly into the Three.js scene */}
+      <MissilesLayer arcs={activeArcs} globeRef={globeRef} />
       <Globe
         ref={initGlobe}
         width={size.w}
@@ -252,18 +254,18 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         ringPropagationSpeed={getRingSpeed}
         ringRepeatPeriod={getRingRepeat}
         ringAltitude={0.001}
-        // Missiles — short bright dash with orange exhaust tail on a high arc
+        // Faint trajectory paths — 3D rocket shapes are rendered by MissilesLayer below
         arcsData={activeArcs}
         arcStartLat={a => a.startLat}
         arcStartLng={a => a.startLng}
         arcEndLat={a => a.endLat}
         arcEndLng={a => a.endLng}
-        arcColor={getMissileColor}
+        arcColor={getPathColor}
         arcAltitude={0.45}
-        arcStroke={1.1}
-        arcDashLength={0.05}
-        arcDashGap={0.95}
-        arcDashAnimateTime={a => a.speed}
+        arcStroke={0.25}
+        arcDashLength={1}
+        arcDashGap={0}
+        arcDashAnimateTime={0}
         arcLabel={a => `<div style="background:rgba(5,5,15,0.92);border:1px solid rgba(255,140,0,0.3);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:10px;color:#fff;pointer-events:none">🚀 ${a.label}</div>`}
         // City dots
         pointsData={CITIES}
