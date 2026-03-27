@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { REGIONS, CATEGORIES } from './data/regions'
 import { useNews } from './hooks/useNews'
-import WorldMap from './components/WorldMap'
+import { lazy, Suspense } from 'react'
+const GlobeMap = lazy(() => import('./components/GlobeMap'))
 import NewsPanel from './components/NewsPanel'
 import Header from './components/Header'
 import CategoryBar from './components/CategoryBar'
@@ -18,12 +19,18 @@ export default function App() {
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Map — takes remaining width; position:relative so WorldMap can use absolute inset-0 */}
+        {/* Globe — lazy loaded so Three.js doesn't block initial paint */}
         <div className="flex-1 relative min-w-0 min-h-0">
-          <WorldMap
-            selectedRegion={selectedRegion}
-            onRegionSelect={setSelectedRegion}
-          />
+          <Suspense fallback={
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-mono text-white/30 animate-pulse">Loading globe…</span>
+            </div>
+          }>
+            <GlobeMap
+              selectedRegion={selectedRegion}
+              onRegionSelect={setSelectedRegion}
+            />
+          </Suspense>
         </div>
 
         {/* News panel — fixed width sidebar on desktop */}
