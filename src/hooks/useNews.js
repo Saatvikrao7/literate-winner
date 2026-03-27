@@ -1,23 +1,39 @@
 import { useState, useEffect, useCallback } from 'react'
 
 const BASE_URL = 'https://content.guardianapis.com/search'
-const API_KEY = 'test' // Guardian's free dev key — works out of the box
+const API_KEY = 'test'
 
 function buildUrl(region, category) {
   const params = new URLSearchParams({
     'api-key': API_KEY,
-    'show-fields': 'thumbnail,headline,trailText,byline,wordcount',
+    'show-fields': 'thumbnail,headline,trailText,byline',
     'show-tags': 'keyword',
     'page-size': '20',
     'order-by': 'newest',
   })
 
-  if (category.section) {
-    params.set('section', category.section)
-  }
-
-  if (region.query) {
+  // Guardian geographic tags are the most accurate way to filter by region.
+  // When a tag exists, use it. When we also have a category section, combine
+  // them via the tag param + section param together.
+  if (region.tag) {
+    // Combine region tag with category section tag if both are set
+    if (category.section) {
+      params.set('tag', region.tag)
+      params.set('section', category.section)
+    } else {
+      params.set('tag', region.tag)
+    }
+  } else if (region.query) {
+    // No Guardian tag available — fall back to keyword search
     params.set('q', region.query)
+    if (category.section) {
+      params.set('section', category.section)
+    }
+  } else {
+    // Global — just filter by category section if set
+    if (category.section) {
+      params.set('section', category.section)
+    }
   }
 
   return `${BASE_URL}?${params.toString()}`
@@ -38,7 +54,7 @@ export function useNews(region, category) {
       if (!res.ok) throw new Error(`API error: ${res.status}`)
       const data = await res.json()
       if (data.response?.status !== 'ok') {
-        throw new Error('Guardian API returned non-ok status')
+        throw new Error('Guardian API error')
       }
       setArticles(data.response.results || [])
       setLastUpdated(new Date())
