@@ -124,18 +124,21 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
   const getCityColor = useCallback(city => {
     const region = REGIONS.find(r => r.id === city.region)
     const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
-    if (!isActive) return 'rgba(255,255,255,0.08)'
-    return city.capital ? (region?.activeColor ?? '#fff') : (region?.color ?? '#fff')
+    if (!isActive) return 'rgba(255,255,255,0.18)'
+    // Capitals get a bright white-ish highlight; others get region color
+    return city.capital ? '#ffffff' : (region?.activeColor ?? '#fff')
   }, [selectedRegion])
 
   const getCityRadius = useCallback(city => {
     const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
-    return city.capital ? (isActive ? 0.45 : 0.2) : (isActive ? 0.28 : 0.12)
+    if (city.capital) return isActive ? 0.9 : 0.35
+    return isActive ? 0.55 : 0.2
   }, [selectedRegion])
 
   const getCityAltitude = useCallback(city => {
     const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
-    return isActive ? (city.capital ? 0.025 : 0.015) : 0.005
+    if (!isActive) return 0.01
+    return city.capital ? 0.08 : 0.05
   }, [selectedRegion])
 
   const getCityLabel = useCallback(city => {
@@ -156,6 +159,21 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
       <div style="color:${region?.color ?? '#888'};font-size:9px;margin-top:2px">${region?.name ?? ''}</div>
     </div>`
   }, [])
+
+  // Pulsing rings for capital cities
+  const capitals = CITIES.filter(c => c.capital)
+
+  const getRingColor = useCallback(city => {
+    const region = REGIONS.find(r => r.id === city.region)
+    const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
+    if (!isActive) return () => 'rgba(0,0,0,0)'
+    const hex = region?.activeColor ?? '#ffffff'
+    // Convert hex to rgb for rgba fade
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return t => `rgba(${r},${g},${b},${(1 - t) * 0.9})`
+  }, [selectedRegion])
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
@@ -184,7 +202,16 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         pointRadius={getCityRadius}
         pointAltitude={getCityAltitude}
         pointLabel={getCityLabel}
-        pointResolution={6}
+        pointResolution={8}
+        // Pulsing rings on capital cities
+        ringsData={capitals}
+        ringLat={c => c.lat}
+        ringLng={c => c.lng}
+        ringColor={getRingColor}
+        ringMaxRadius={2.2}
+        ringPropagationSpeed={0.8}
+        ringRepeatPeriod={1400}
+        ringAltitude={0.002}
       />
 
       {/* Region legend */}
