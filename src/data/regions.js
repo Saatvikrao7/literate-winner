@@ -12,7 +12,7 @@ export const REGIONS = [
   {
     id: 'north-america',
     name: 'North America',
-    tag: 'world/americas',
+    tag: null,
     query: '"United States" OR "North America" OR Canada OR Mexico',
     color: '#ef4444',
     activeColor: '#f87171',
@@ -84,7 +84,10 @@ export const REGIONS = [
   {
     id: 'oceania',
     name: 'Oceania',
-    tag: 'world/australia-news',
+    tag: null,
+    // Guardian Australia content lives under the 'australia-news' section,
+    // not a world tag. Use section param + query fallback.
+    regionSection: 'australia-news',
     query: 'Australia OR "New Zealand"',
     color: '#059669',
     activeColor: '#10b981',

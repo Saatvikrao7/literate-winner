@@ -12,28 +12,29 @@ function buildUrl(region, category) {
     'order-by': 'newest',
   })
 
-  // Guardian geographic tags are the most accurate way to filter by region.
-  // When a tag exists, use it. When we also have a category section, combine
-  // them via the tag param + section param together.
+  // Priority: tag > regionSection > query > global
+  // Guardian's section param only accepts one value, so when both a region
+  // section and a category section are needed, we add the region as a query term.
   if (region.tag) {
-    // Combine region tag with category section tag if both are set
+    params.set('tag', region.tag)
+    if (category.section) params.set('section', category.section)
+
+  } else if (region.regionSection) {
     if (category.section) {
-      params.set('tag', region.tag)
+      // Can't combine two sections — scope by region query + category section
+      if (region.query) params.set('q', region.query)
       params.set('section', category.section)
     } else {
-      params.set('tag', region.tag)
+      params.set('section', region.regionSection)
     }
+
   } else if (region.query) {
-    // No Guardian tag available — fall back to keyword search
     params.set('q', region.query)
-    if (category.section) {
-      params.set('section', category.section)
-    }
+    if (category.section) params.set('section', category.section)
+
   } else {
-    // Global — just filter by category section if set
-    if (category.section) {
-      params.set('section', category.section)
-    }
+    // Global
+    if (category.section) params.set('section', category.section)
   }
 
   return `${BASE_URL}?${params.toString()}`
