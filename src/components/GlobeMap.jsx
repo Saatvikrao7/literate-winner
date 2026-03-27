@@ -3,6 +3,7 @@ import Globe from 'react-globe.gl'
 import * as topojson from 'topojson-client'
 import { COUNTRY_REGION_MAP, REGIONS } from '../data/regions'
 import { CITIES } from '../data/cities'
+import { CONFLICT_ZONES, CONFLICT_ARCS } from '../data/events'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
@@ -160,20 +161,63 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
     </div>`
   }, [])
 
-  // Pulsing rings for capital cities
-  const capitals = CITIES.filter(c => c.capital)
+  // ── Conflict zone rings (faster, angrier than capital rings) ─────────────
+  const getConflictRingColor = useCallback(zone => {
+    const r = parseInt(zone.color.slice(1,3), 16)
+    const g = parseInt(zone.color.slice(3,5), 16)
+    const b = parseInt(zone.color.slice(5,7), 16)
+    const base = zone.severity === 3 ? 1.0 : zone.severity === 2 ? 0.75 : 0.5
+    return t => `rgba(${r},${g},${b},${(1 - t) * base})`
+  }, [])
 
-  const getRingColor = useCallback(city => {
-    const region = REGIONS.find(r => r.id === city.region)
-    const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
+  const getConflictZoneLabel = useCallback(zone =>
+    `<div style="
+      background:rgba(5,5,15,0.95);border:1px solid ${zone.color}44;
+      border-radius:6px;padding:4px 9px;
+      font-family:'JetBrains Mono',monospace;font-size:11px;color:#fff;
+      pointer-events:none;white-space:nowrap;">
+      <div style="color:${zone.color};font-weight:700;font-size:10px">⚠ ${zone.label}</div>
+      <div style="color:rgba(255,255,255,0.5);font-size:9px;margin-top:1px">${zone.detail}</div>
+    </div>`, [])
+
+  // ── Conflict arcs (animated projectile streaks) ───────────────────────────
+  const getArcColor = useCallback(arc => {
+    const c = arc.color
+    const r = parseInt(c.slice(1,3), 16)
+    const g = parseInt(c.slice(3,5), 16)
+    const b = parseInt(c.slice(5,7), 16)
+    return [`rgba(${r},${g},${b},0)`, `rgba(${r},${g},${b},1)`, `rgba(${r},${g},${b},0)`]
+  }, [])
+
+  // ── Unified rings dataset: conflict zones + capital cities ───────────────
+  // react-globe.gl only supports one ringsData layer, so we merge both types
+  const allRings = [
+    ...CONFLICT_ZONES.map(z => ({ ...z, _type: 'conflict' })),
+    ...CITIES.filter(c => c.capital).map(c => ({ ...c, _type: 'capital' })),
+  ]
+
+  const getRingColor = useCallback(item => {
+    if (item._type === 'conflict') {
+      const r = parseInt(item.color.slice(1,3), 16)
+      const g = parseInt(item.color.slice(3,5), 16)
+      const b = parseInt(item.color.slice(5,7), 16)
+      const alpha = item.severity === 3 ? 1.0 : item.severity === 2 ? 0.75 : 0.5
+      return t => `rgba(${r},${g},${b},${(1 - t) * alpha})`
+    }
+    // capital city
+    const region = REGIONS.find(r => r.id === item.region)
+    const isActive = selectedRegion.id === 'all' || item.region === selectedRegion.id
     if (!isActive) return () => 'rgba(0,0,0,0)'
     const hex = region?.activeColor ?? '#ffffff'
-    // Convert hex to rgb for rgba fade
-    const r = parseInt(hex.slice(1, 3), 16)
-    const g = parseInt(hex.slice(3, 5), 16)
-    const b = parseInt(hex.slice(5, 7), 16)
-    return t => `rgba(${r},${g},${b},${(1 - t) * 0.9})`
+    const r = parseInt(hex.slice(1,3), 16)
+    const g = parseInt(hex.slice(3,5), 16)
+    const b = parseInt(hex.slice(5,7), 16)
+    return t => `rgba(${r},${g},${b},${(1 - t) * 0.85})`
   }, [selectedRegion])
+
+  const getRingMaxRadius  = useCallback(item => item._type === 'conflict' ? 1.2 + item.severity * 0.4 : 2.0, [])
+  const getRingSpeed      = useCallback(item => item._type === 'conflict' ? 1.2 + item.severity * 0.4 : 0.8, [])
+  const getRingRepeat     = useCallback(item => item._type === 'conflict' ? 1800 - item.severity * 400 : 1400, [])
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
@@ -194,6 +238,28 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         polygonLabel={getLabel}
         onPolygonHover={setHoveredCountry}
         onPolygonClick={handleClick}
+        // Unified rings: conflict zones (fast/red) + capital cities (slow/regional color)
+        ringsData={allRings}
+        ringLat={item => item.lat}
+        ringLng={item => item.lng}
+        ringColor={getRingColor}
+        ringMaxRadius={getRingMaxRadius}
+        ringPropagationSpeed={getRingSpeed}
+        ringRepeatPeriod={getRingRepeat}
+        ringAltitude={0.001}
+        // Conflict arcs — animated projectile streaks
+        arcsData={CONFLICT_ARCS}
+        arcStartLat={a => a.startLat}
+        arcStartLng={a => a.startLng}
+        arcEndLat={a => a.endLat}
+        arcEndLng={a => a.endLng}
+        arcColor={getArcColor}
+        arcAltitude={0.3}
+        arcStroke={0.4}
+        arcDashLength={0.25}
+        arcDashGap={0.75}
+        arcDashAnimateTime={a => a.speed}
+        arcLabel={a => `<div style="background:rgba(5,5,15,0.92);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:10px;color:#fff;pointer-events:none">${a.label}</div>`}
         // City dots
         pointsData={CITIES}
         pointLat={c => c.lat}
@@ -203,15 +269,6 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         pointAltitude={getCityAltitude}
         pointLabel={getCityLabel}
         pointResolution={8}
-        // Pulsing rings on capital cities
-        ringsData={capitals}
-        ringLat={c => c.lat}
-        ringLng={c => c.lng}
-        ringColor={getRingColor}
-        ringMaxRadius={2.2}
-        ringPropagationSpeed={0.8}
-        ringRepeatPeriod={1400}
-        ringAltitude={0.002}
       />
 
       {/* Region legend */}
