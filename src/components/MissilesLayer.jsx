@@ -61,7 +61,7 @@ function makeMissile() {
   fin.position.y = -0.18
   g.add(fin)
 
-  g.scale.setScalar(1.6)
+  g.scale.setScalar(4.8)
   return g
 }
 
