@@ -4,6 +4,7 @@ import * as topojson from 'topojson-client'
 import { COUNTRY_REGION_MAP, REGIONS } from '../data/regions'
 import { CITIES } from '../data/cities'
 import { CONFLICT_ZONES, CONFLICT_ARCS } from '../data/events'
+import { useConflictEvents } from '../hooks/useConflictEvents'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
@@ -15,6 +16,13 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
   const [size, setSize] = useState({ w: 800, h: 600 })
   const autoRotateRef = useRef(true)
   const rotateTimerRef = useRef(null)
+
+  // Live conflict events from news API (refreshes every 5 min)
+  const { zones: liveZones, arcs: liveArcs, status: conflictStatus } = useConflictEvents()
+
+  // Merge static fallbacks with live data (static fills the gap before first fetch)
+  const activeZones = liveZones.length > 0 ? liveZones : CONFLICT_ZONES
+  const activeArcs  = liveArcs.length  > 0 ? liveArcs  : CONFLICT_ARCS
 
   // Load country polygons (topojson → geojson)
   useEffect(() => {
@@ -192,7 +200,7 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
   // ── Unified rings dataset: conflict zones + capital cities ───────────────
   // react-globe.gl only supports one ringsData layer, so we merge both types
   const allRings = [
-    ...CONFLICT_ZONES.map(z => ({ ...z, _type: 'conflict' })),
+    ...activeZones.map(z => ({ ...z, _type: 'conflict' })),
     ...CITIES.filter(c => c.capital).map(c => ({ ...c, _type: 'capital' })),
   ]
 
@@ -247,8 +255,8 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         ringPropagationSpeed={getRingSpeed}
         ringRepeatPeriod={getRingRepeat}
         ringAltitude={0.001}
-        // Conflict arcs — animated projectile streaks
-        arcsData={CONFLICT_ARCS}
+        // Conflict arcs — animated projectile streaks (news-driven)
+        arcsData={activeArcs}
         arcStartLat={a => a.startLat}
         arcStartLng={a => a.startLng}
         arcEndLat={a => a.endLat}
@@ -297,9 +305,25 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         })}
       </div>
 
-      {/* Hint */}
-      <div className="absolute bottom-4 right-4 text-[10px] font-mono text-white/20 pointer-events-none text-right">
-        drag to spin · scroll to zoom<br />click country to filter
+      {/* Conflict event status + hint */}
+      <div className="absolute bottom-4 right-4 text-right pointer-events-none space-y-1">
+        <div className="flex items-center justify-end gap-1.5">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: conflictStatus === 'ready' ? '#22c55e' : conflictStatus === 'error' ? '#ef4444' : '#eab308',
+              boxShadow: conflictStatus === 'ready' ? '0 0 4px #22c55e' : 'none',
+            }}
+          />
+          <span className="text-[9px] font-mono text-white/25">
+            {conflictStatus === 'ready'   ? `${activeZones.length} live conflict zones` :
+             conflictStatus === 'loading' ? 'updating events…' :
+             conflictStatus === 'error'   ? 'using cached events' : ''}
+          </span>
+        </div>
+        <div className="text-[10px] font-mono text-white/20">
+          drag to spin · scroll to zoom<br />click country to filter
+        </div>
       </div>
     </div>
   )
