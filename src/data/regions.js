@@ -102,75 +102,209 @@ export const CATEGORIES = [
   { id: 'media',       name: 'Media',       section: 'media',         color: '#ec4899' },
 ];
 
-// ISO 3166-1 alpha-3 country codes mapped to region IDs
+// ISO 3166-1 numeric country codes mapped to region IDs
+// (world-atlas topojson uses numeric IDs, not alpha-3)
 export const COUNTRY_REGION_MAP = {
   // North America
-  USA: 'north-america', CAN: 'north-america', MEX: 'north-america',
-  GTM: 'north-america', BLZ: 'north-america', HND: 'north-america',
-  SLV: 'north-america', NIC: 'north-america', CRI: 'north-america',
-  PAN: 'north-america', CUB: 'north-america', JAM: 'north-america',
-  HTI: 'north-america', DOM: 'north-america', PRI: 'north-america',
-  TTO: 'north-america', BHS: 'north-america',
+  '840': 'north-america', // USA
+  '124': 'north-america', // Canada
+  '484': 'north-america', // Mexico
+  '320': 'north-america', // Guatemala
+  '084': 'north-america', // Belize
+  '340': 'north-america', // Honduras
+  '222': 'north-america', // El Salvador
+  '558': 'north-america', // Nicaragua
+  '188': 'north-america', // Costa Rica
+  '591': 'north-america', // Panama
+  '192': 'north-america', // Cuba
+  '388': 'north-america', // Jamaica
+  '332': 'north-america', // Haiti
+  '214': 'north-america', // Dominican Republic
+  '630': 'north-america', // Puerto Rico
+  '780': 'north-america', // Trinidad and Tobago
+  '044': 'north-america', // Bahamas
 
   // South America
-  BRA: 'south-america', ARG: 'south-america', COL: 'south-america',
-  CHL: 'south-america', PER: 'south-america', VEN: 'south-america',
-  ECU: 'south-america', BOL: 'south-america', PRY: 'south-america',
-  URY: 'south-america', GUY: 'south-america', SUR: 'south-america',
-  GUF: 'south-america',
+  '076': 'south-america', // Brazil
+  '032': 'south-america', // Argentina
+  '170': 'south-america', // Colombia
+  '152': 'south-america', // Chile
+  '604': 'south-america', // Peru
+  '862': 'south-america', // Venezuela
+  '218': 'south-america', // Ecuador
+  '068': 'south-america', // Bolivia
+  '600': 'south-america', // Paraguay
+  '858': 'south-america', // Uruguay
+  '328': 'south-america', // Guyana
+  '740': 'south-america', // Suriname
 
   // Europe
-  GBR: 'europe', FRA: 'europe', DEU: 'europe', ITA: 'europe', ESP: 'europe',
-  PRT: 'europe', NLD: 'europe', BEL: 'europe', LUX: 'europe', CHE: 'europe',
-  AUT: 'europe', POL: 'europe', CZE: 'europe', SVK: 'europe', HUN: 'europe',
-  ROU: 'europe', BGR: 'europe', GRC: 'europe', SRB: 'europe', HRV: 'europe',
-  SVN: 'europe', BIH: 'europe', MKD: 'europe', ALB: 'europe', MNE: 'europe',
-  SWE: 'europe', NOR: 'europe', DNK: 'europe', FIN: 'europe', ISL: 'europe',
-  IRL: 'europe', EST: 'europe', LVA: 'europe', LTU: 'europe', MLT: 'europe',
-  CYP: 'europe', AND: 'europe', MCO: 'europe', SMR: 'europe', VAT: 'europe',
-  LIE: 'europe', XKX: 'europe',
+  '826': 'europe', // UK
+  '250': 'europe', // France
+  '276': 'europe', // Germany
+  '380': 'europe', // Italy
+  '724': 'europe', // Spain
+  '620': 'europe', // Portugal
+  '528': 'europe', // Netherlands
+  '056': 'europe', // Belgium
+  '442': 'europe', // Luxembourg
+  '756': 'europe', // Switzerland
+  '040': 'europe', // Austria
+  '616': 'europe', // Poland
+  '203': 'europe', // Czech Republic
+  '703': 'europe', // Slovakia
+  '348': 'europe', // Hungary
+  '642': 'europe', // Romania
+  '100': 'europe', // Bulgaria
+  '300': 'europe', // Greece
+  '688': 'europe', // Serbia
+  '191': 'europe', // Croatia
+  '705': 'europe', // Slovenia
+  '070': 'europe', // Bosnia
+  '807': 'europe', // North Macedonia
+  '008': 'europe', // Albania
+  '499': 'europe', // Montenegro
+  '752': 'europe', // Sweden
+  '578': 'europe', // Norway
+  '208': 'europe', // Denmark
+  '246': 'europe', // Finland
+  '352': 'europe', // Iceland
+  '372': 'europe', // Ireland
+  '233': 'europe', // Estonia
+  '428': 'europe', // Latvia
+  '440': 'europe', // Lithuania
+  '470': 'europe', // Malta
+  '196': 'europe', // Cyprus
 
   // Russia / CIS
-  RUS: 'russia', UKR: 'russia', BLR: 'russia', KAZ: 'russia',
-  UZB: 'russia', TJK: 'russia', KGZ: 'russia', TKM: 'russia',
-  AZE: 'russia', ARM: 'russia', GEO: 'russia', MDA: 'russia',
+  '643': 'russia', // Russia
+  '804': 'russia', // Ukraine
+  '112': 'russia', // Belarus
+  '398': 'russia', // Kazakhstan
+  '860': 'russia', // Uzbekistan
+  '762': 'russia', // Tajikistan
+  '417': 'russia', // Kyrgyzstan
+  '795': 'russia', // Turkmenistan
+  '031': 'russia', // Azerbaijan
+  '051': 'russia', // Armenia
+  '268': 'russia', // Georgia
+  '498': 'russia', // Moldova
 
   // Middle East
-  IRN: 'middle-east', IRQ: 'middle-east', SYR: 'middle-east', LBN: 'middle-east',
-  ISR: 'middle-east', JOR: 'middle-east', SAU: 'middle-east', YEM: 'middle-east',
-  OMN: 'middle-east', ARE: 'middle-east', QAT: 'middle-east', KWT: 'middle-east',
-  BHR: 'middle-east', TUR: 'middle-east', PSE: 'middle-east',
+  '364': 'middle-east', // Iran
+  '368': 'middle-east', // Iraq
+  '760': 'middle-east', // Syria
+  '422': 'middle-east', // Lebanon
+  '376': 'middle-east', // Israel
+  '400': 'middle-east', // Jordan
+  '682': 'middle-east', // Saudi Arabia
+  '887': 'middle-east', // Yemen
+  '512': 'middle-east', // Oman
+  '784': 'middle-east', // UAE
+  '634': 'middle-east', // Qatar
+  '414': 'middle-east', // Kuwait
+  '048': 'middle-east', // Bahrain
+  '792': 'middle-east', // Turkey
+  '275': 'middle-east', // Palestine
 
   // Africa
-  NGA: 'africa', ZAF: 'africa', EGY: 'africa', KEN: 'africa', ETH: 'africa',
-  GHA: 'africa', TZA: 'africa', UGA: 'africa', DZA: 'africa', MAR: 'africa',
-  MOZ: 'africa', MDG: 'africa', CMR: 'africa', CIV: 'africa', NER: 'africa',
-  BFA: 'africa', MLI: 'africa', SEN: 'africa', GIN: 'africa', ZMB: 'africa',
-  ZWE: 'africa', SDN: 'africa', SSD: 'africa', LBY: 'africa', TUN: 'africa',
-  AGO: 'africa', SOM: 'africa', RWA: 'africa', BDI: 'africa', COD: 'africa',
-  CAF: 'africa', TCD: 'africa', COG: 'africa', GAB: 'africa', GNQ: 'africa',
-  BWA: 'africa', NAM: 'africa', LSO: 'africa', SWZ: 'africa', MWI: 'africa',
-  ERI: 'africa', DJI: 'africa', COM: 'africa', CPV: 'africa', STP: 'africa',
-  GNB: 'africa', SLE: 'africa', LBR: 'africa', TGO: 'africa', BEN: 'africa',
-  MRT: 'africa', GMB: 'africa',
+  '566': 'africa', // Nigeria
+  '710': 'africa', // South Africa
+  '818': 'africa', // Egypt
+  '404': 'africa', // Kenya
+  '231': 'africa', // Ethiopia
+  '288': 'africa', // Ghana
+  '834': 'africa', // Tanzania
+  '800': 'africa', // Uganda
+  '012': 'africa', // Algeria
+  '504': 'africa', // Morocco
+  '508': 'africa', // Mozambique
+  '450': 'africa', // Madagascar
+  '120': 'africa', // Cameroon
+  '384': 'africa', // Ivory Coast
+  '562': 'africa', // Niger
+  '854': 'africa', // Burkina Faso
+  '466': 'africa', // Mali
+  '686': 'africa', // Senegal
+  '324': 'africa', // Guinea
+  '894': 'africa', // Zambia
+  '716': 'africa', // Zimbabwe
+  '729': 'africa', // Sudan
+  '728': 'africa', // South Sudan
+  '434': 'africa', // Libya
+  '788': 'africa', // Tunisia
+  '024': 'africa', // Angola
+  '706': 'africa', // Somalia
+  '646': 'africa', // Rwanda
+  '108': 'africa', // Burundi
+  '180': 'africa', // DR Congo
+  '140': 'africa', // Central African Republic
+  '148': 'africa', // Chad
+  '178': 'africa', // Congo
+  '266': 'africa', // Gabon
+  '226': 'africa', // Equatorial Guinea
+  '072': 'africa', // Botswana
+  '516': 'africa', // Namibia
+  '426': 'africa', // Lesotho
+  '748': 'africa', // Eswatini
+  '454': 'africa', // Malawi
+  '232': 'africa', // Eritrea
+  '262': 'africa', // Djibouti
+  '174': 'africa', // Comoros
+  '132': 'africa', // Cape Verde
+  '678': 'africa', // Sao Tome
+  '624': 'africa', // Guinea-Bissau
+  '694': 'africa', // Sierra Leone
+  '430': 'africa', // Liberia
+  '768': 'africa', // Togo
+  '204': 'africa', // Benin
+  '478': 'africa', // Mauritania
+  '270': 'africa', // Gambia
 
   // South Asia
-  IND: 'south-asia', PAK: 'south-asia', BGD: 'south-asia', LKA: 'south-asia',
-  NPL: 'south-asia', BTN: 'south-asia', MDV: 'south-asia', AFG: 'south-asia',
+  '356': 'south-asia', // India
+  '586': 'south-asia', // Pakistan
+  '050': 'south-asia', // Bangladesh
+  '144': 'south-asia', // Sri Lanka
+  '524': 'south-asia', // Nepal
+  '064': 'south-asia', // Bhutan
+  '462': 'south-asia', // Maldives
+  '004': 'south-asia', // Afghanistan
 
   // East Asia
-  CHN: 'east-asia', JPN: 'east-asia', KOR: 'east-asia', PRK: 'east-asia',
-  TWN: 'east-asia', MNG: 'east-asia',
+  '156': 'east-asia', // China
+  '392': 'east-asia', // Japan
+  '410': 'east-asia', // South Korea
+  '408': 'east-asia', // North Korea
+  '158': 'east-asia', // Taiwan
+  '496': 'east-asia', // Mongolia
 
   // SE Asia
-  IDN: 'southeast-asia', PHL: 'southeast-asia', VNM: 'southeast-asia',
-  THA: 'southeast-asia', MYS: 'southeast-asia', SGP: 'southeast-asia',
-  MMR: 'southeast-asia', KHM: 'southeast-asia', LAO: 'southeast-asia',
-  BRN: 'southeast-asia', TLS: 'southeast-asia',
+  '360': 'southeast-asia', // Indonesia
+  '608': 'southeast-asia', // Philippines
+  '704': 'southeast-asia', // Vietnam
+  '764': 'southeast-asia', // Thailand
+  '458': 'southeast-asia', // Malaysia
+  '702': 'southeast-asia', // Singapore
+  '104': 'southeast-asia', // Myanmar
+  '116': 'southeast-asia', // Cambodia
+  '418': 'southeast-asia', // Laos
+  '096': 'southeast-asia', // Brunei
+  '626': 'southeast-asia', // Timor-Leste
 
   // Oceania
-  AUS: 'oceania', NZL: 'oceania', PNG: 'oceania', FJI: 'oceania',
-  SLB: 'oceania', VUT: 'oceania', WSM: 'oceania', TON: 'oceania',
-  FSM: 'oceania', KIR: 'oceania', MHL: 'oceania', NRU: 'oceania',
-  PLW: 'oceania', TUV: 'oceania',
+  '036': 'oceania', // Australia
+  '554': 'oceania', // New Zealand
+  '598': 'oceania', // Papua New Guinea
+  '242': 'oceania', // Fiji
+  '090': 'oceania', // Solomon Islands
+  '548': 'oceania', // Vanuatu
+  '882': 'oceania', // Samoa
+  '776': 'oceania', // Tonga
+  '583': 'oceania', // Micronesia
+  '296': 'oceania', // Kiribati
+  '584': 'oceania', // Marshall Islands
+  '520': 'oceania', // Nauru
+  '585': 'oceania', // Palau
+  '798': 'oceania', // Tuvalu
 };

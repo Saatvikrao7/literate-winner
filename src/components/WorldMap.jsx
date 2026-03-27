@@ -30,8 +30,8 @@ export default memo(function WorldMap({ selectedRegion, onRegionSelect }) {
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, text: '' })
 
   function handleMouseEnter(geo, evt) {
-    const isoA3 = geo.properties?.['ADM0_A3'] || geo.properties?.['ISO_A3'] || geo.id
-    const regionId = COUNTRY_REGION_MAP[isoA3]
+    const numericId = String(geo.id)
+    const regionId = COUNTRY_REGION_MAP[numericId]
     if (regionId) {
       setHoveredRegion(regionId)
       const region = REGIONS.find(r => r.id === regionId)
@@ -39,8 +39,10 @@ export default memo(function WorldMap({ selectedRegion, onRegionSelect }) {
         visible: true,
         x: evt.clientX,
         y: evt.clientY,
-        text: region?.name ?? regionId,
+        text: `${geo.properties?.name ?? numericId} — ${region?.name ?? regionId}`,
       })
+    } else {
+      setTooltip(t => ({ ...t, visible: false }))
     }
   }
 
@@ -56,8 +58,8 @@ export default memo(function WorldMap({ selectedRegion, onRegionSelect }) {
   }
 
   function handleClick(geo) {
-    const isoA3 = geo.properties?.['ADM0_A3'] || geo.properties?.['ISO_A3'] || geo.id
-    const regionId = COUNTRY_REGION_MAP[isoA3]
+    const numericId = String(geo.id)
+    const regionId = COUNTRY_REGION_MAP[numericId]
     if (!regionId) return
     if (selectedRegion.id === regionId) {
       onRegionSelect(REGIONS[0]) // deselect → back to global
@@ -87,11 +89,7 @@ export default memo(function WorldMap({ selectedRegion, onRegionSelect }) {
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map(geo => {
-                const isoA3 =
-                  geo.properties?.['ADM0_A3'] ||
-                  geo.properties?.['ISO_A3'] ||
-                  geo.id
-                const regionId = COUNTRY_REGION_MAP[isoA3]
+                const regionId = COUNTRY_REGION_MAP[String(geo.id)]
                 const fill = getCountryColor(isoA3, selectedRegion.id, hoveredRegion)
                 const isClickable = !!regionId
 
