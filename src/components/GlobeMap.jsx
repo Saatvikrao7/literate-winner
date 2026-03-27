@@ -233,7 +233,7 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
         bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
         atmosphereColor="#2a3f8f"
         atmosphereAltitude={0.22}
