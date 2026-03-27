@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import Globe from 'react-globe.gl'
 import * as topojson from 'topojson-client'
 import { COUNTRY_REGION_MAP, REGIONS } from '../data/regions'
+import { CITIES } from '../data/cities'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
@@ -119,6 +120,43 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
     </div>`
   }, [])
 
+  // City dot helpers
+  const getCityColor = useCallback(city => {
+    const region = REGIONS.find(r => r.id === city.region)
+    const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
+    if (!isActive) return 'rgba(255,255,255,0.08)'
+    return city.capital ? (region?.activeColor ?? '#fff') : (region?.color ?? '#fff')
+  }, [selectedRegion])
+
+  const getCityRadius = useCallback(city => {
+    const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
+    return city.capital ? (isActive ? 0.45 : 0.2) : (isActive ? 0.28 : 0.12)
+  }, [selectedRegion])
+
+  const getCityAltitude = useCallback(city => {
+    const isActive = selectedRegion.id === 'all' || city.region === selectedRegion.id
+    return isActive ? (city.capital ? 0.025 : 0.015) : 0.005
+  }, [selectedRegion])
+
+  const getCityLabel = useCallback(city => {
+    const region = REGIONS.find(r => r.id === city.region)
+    return `<div style="
+      background:rgba(5,5,15,0.95);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:6px;
+      padding:4px 9px;
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;
+      color:#fff;
+      pointer-events:none;
+      white-space:nowrap;
+    ">
+      <span style="font-weight:600">${city.name}</span>
+      ${city.capital ? '<span style="color:#facc15;margin-left:5px;font-size:9px">★ CAPITAL</span>' : ''}
+      <div style="color:${region?.color ?? '#888'};font-size:9px;margin-top:2px">${region?.name ?? ''}</div>
+    </div>`
+  }, [])
+
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
       <Globe
@@ -138,6 +176,15 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         polygonLabel={getLabel}
         onPolygonHover={setHoveredCountry}
         onPolygonClick={handleClick}
+        // City dots
+        pointsData={CITIES}
+        pointLat={c => c.lat}
+        pointLng={c => c.lng}
+        pointColor={getCityColor}
+        pointRadius={getCityRadius}
+        pointAltitude={getCityAltitude}
+        pointLabel={getCityLabel}
+        pointResolution={6}
       />
 
       {/* Region legend */}
