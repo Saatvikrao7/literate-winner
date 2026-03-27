@@ -188,14 +188,11 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
       <div style="color:rgba(255,255,255,0.5);font-size:9px;margin-top:1px">${zone.detail}</div>
     </div>`, [])
 
-  // ── Conflict arcs (animated projectile streaks) ───────────────────────────
-  const getArcColor = useCallback(arc => {
-    const c = arc.color
-    const r = parseInt(c.slice(1,3), 16)
-    const g = parseInt(c.slice(3,5), 16)
-    const b = parseInt(c.slice(5,7), 16)
-    return [`rgba(${r},${g},${b},0)`, `rgba(${r},${g},${b},1)`, `rgba(${r},${g},${b},0)`]
-  }, [])
+  // ── Missile color: transparent base → orange exhaust → bright white tip ──
+  const getMissileColor = useCallback(() =>
+    // gradient along the arc: tail fades in, nose is bright white-hot
+    ['rgba(0,0,0,0)', 'rgba(255,80,0,0)', 'rgba(255,140,0,0.6)', 'rgba(255,220,80,1)', 'rgba(255,255,220,1)']
+  , [])
 
   // ── Unified rings dataset: conflict zones + capital cities ───────────────
   // react-globe.gl only supports one ringsData layer, so we merge both types
@@ -255,19 +252,19 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         ringPropagationSpeed={getRingSpeed}
         ringRepeatPeriod={getRingRepeat}
         ringAltitude={0.001}
-        // Conflict arcs — animated projectile streaks (news-driven)
+        // Missiles — short bright dash with orange exhaust tail on a high arc
         arcsData={activeArcs}
         arcStartLat={a => a.startLat}
         arcStartLng={a => a.startLng}
         arcEndLat={a => a.endLat}
         arcEndLng={a => a.endLng}
-        arcColor={getArcColor}
-        arcAltitude={0.3}
-        arcStroke={0.4}
-        arcDashLength={0.25}
-        arcDashGap={0.75}
+        arcColor={getMissileColor}
+        arcAltitude={0.45}
+        arcStroke={1.1}
+        arcDashLength={0.05}
+        arcDashGap={0.95}
         arcDashAnimateTime={a => a.speed}
-        arcLabel={a => `<div style="background:rgba(5,5,15,0.92);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:10px;color:#fff;pointer-events:none">${a.label}</div>`}
+        arcLabel={a => `<div style="background:rgba(5,5,15,0.92);border:1px solid rgba(255,140,0,0.3);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:10px;color:#fff;pointer-events:none">🚀 ${a.label}</div>`}
         // City dots
         pointsData={CITIES}
         pointLat={c => c.lat}
