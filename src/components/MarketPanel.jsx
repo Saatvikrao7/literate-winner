@@ -58,8 +58,8 @@ export default function MarketPanel({ data, loading, error, lastUpdated, refetch
         <div className="flex items-center gap-2">
           <TrendingUp size={14} className="text-green-400" />
           <span className="text-xs font-mono text-white/60">Global Markets</span>
-          {!loading && data.length > 0 && (
-            <span className="text-[10px] font-mono text-white/25">({data.length} indices)</span>
+          {!loading && data.length > 0 && data[0]?.simulated && (
+            <span className="text-[9px] font-mono px-1 rounded" style={{ background: '#eab30822', color: '#eab308' }}>SIMULATED</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -108,13 +108,7 @@ export default function MarketPanel({ data, loading, error, lastUpdated, refetch
           </div>
         )}
 
-        {error && data.length === 0 && (
-          <div className="m-3 p-3 bg-red-950/30 border border-red-800/30 rounded-lg">
-            <p className="text-xs text-red-400 font-mono">Failed to load market data</p>
-            <p className="text-[11px] text-red-400/60 mt-1">{error}</p>
-            <button onClick={refetch} className="mt-2 text-[11px] text-red-400 underline font-mono">Retry</button>
-          </div>
-        )}
+        {/* no error state — simulation always provides data */}
 
         {regions.map(region => {
           const items = region.ids.map(id => data.find(m => m.id === id)).filter(Boolean)
