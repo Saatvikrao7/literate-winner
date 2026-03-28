@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { MARKETS } from '../data/markets'
 
 const REFRESH_MS = 30_000
+const HISTORY_LEN = 24 // sparkline points
 
-// Approximate base prices (updated ~early 2025) used when API is unavailable
 const BASE_PRICES = {
   '^GSPC':    5700,
   '^IXIC':   18200,
@@ -30,24 +30,15 @@ function fmt(n, decimals = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
-// Generate realistic-looking simulated data
-function simulateMarkets(prevPrices) {
-  return MARKETS.map(m => {
-    const base = prevPrices.current[m.symbol] ?? BASE_PRICES[m.symbol] ?? 1000
-    // Random walk: ±0.3% per tick
-    const move = base * (Math.random() * 0.006 - 0.003)
-    const price = +(base + move).toFixed(2)
-    prevPrices.current[m.symbol] = price
-
-    const prev   = BASE_PRICES[m.symbol] ?? price
-    const change = +(price - prev).toFixed(2)
-    const pct    = +((change / prev) * 100).toFixed(2)
-
-    return enrich(m, price, change, pct, prev, 'SIMULATED')
-  })
+function pushHistory(histRef, symbol, price) {
+  const arr = histRef.current[symbol] ?? []
+  arr.push(price)
+  if (arr.length > HISTORY_LEN) arr.splice(0, arr.length - HISTORY_LEN)
+  histRef.current[symbol] = arr
 }
 
-function enrich(m, price, change, pct, prev, state) {
+function enrich(m, price, change, pct, prev, state, histRef) {
+  if (price != null) pushHistory(histRef, m.symbol, price)
   return {
     ...m,
     price,
@@ -57,23 +48,36 @@ function enrich(m, price, change, pct, prev, state) {
     state: state ?? 'CLOSED',
     currency: m.currency ?? 'USD',
     up: pct != null ? pct >= 0 : null,
-    priceStr:  price  != null ? fmt(price)                             : '—',
-    changeStr: change != null ? (change >= 0 ? '+' : '') + fmt(change) : '—',
+    priceStr:  price  != null ? fmt(price)                              : '—',
+    changeStr: change != null ? (change >= 0 ? '+' : '') + fmt(change)  : '—',
     pctStr:    pct    != null ? (pct    >= 0 ? '+' : '') + fmt(pct) + '%' : '—',
+    history: [...(histRef.current[m.symbol] ?? [])],
     simulated: state === 'SIMULATED',
   }
+}
+
+function simulateMarkets(prevPrices, histRef) {
+  return MARKETS.map(m => {
+    const base  = prevPrices.current[m.symbol] ?? BASE_PRICES[m.symbol] ?? 1000
+    const move  = base * (Math.random() * 0.006 - 0.003)
+    const price = +(base + move).toFixed(2)
+    prevPrices.current[m.symbol] = price
+    const prev   = BASE_PRICES[m.symbol] ?? price
+    const change = +(price - prev).toFixed(2)
+    const pct    = +((change / prev) * 100).toFixed(2)
+    return enrich(m, price, change, pct, prev, 'SIMULATED', histRef)
+  })
 }
 
 export function useMarketData() {
   const [data,        setData]        = useState([])
   const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const prevPrices = useRef({ ...BASE_PRICES })
+  const histRef    = useRef({})
 
   const fetch_ = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
       const symbols = MARKETS.map(m => m.symbol).join(',')
       const res = await fetch(`/api/markets?symbols=${encodeURIComponent(symbols)}`, {
@@ -86,7 +90,6 @@ export function useMarketData() {
         quotes = json.quoteResponse?.result ?? []
       }
 
-      // If we got real quotes, use them; otherwise simulate
       const gotRealData = quotes.some(q => q.regularMarketPrice != null)
 
       if (gotRealData) {
@@ -98,17 +101,15 @@ export function useMarketData() {
           const prev   = q.regularMarketPreviousClose ?? null
           const state  = q.marketState                ?? 'CLOSED'
           if (price != null) prevPrices.current[m.symbol] = price
-          return enrich(m, price, change, pct, prev, state)
+          return enrich(m, price, change, pct, prev, state, histRef)
         })
         setData(enriched)
       } else {
-        setData(simulateMarkets(prevPrices))
+        setData(simulateMarkets(prevPrices, histRef))
       }
-
       setLastUpdated(new Date())
     } catch {
-      // On any error, fall back to simulation so the UI still works
-      setData(simulateMarkets(prevPrices))
+      setData(simulateMarkets(prevPrices, histRef))
       setLastUpdated(new Date())
     } finally {
       setLoading(false)
@@ -121,5 +122,5 @@ export function useMarketData() {
     return () => clearInterval(id)
   }, [fetch_])
 
-  return { data, loading, error, lastUpdated, refetch: fetch_ }
+  return { data, loading, lastUpdated, refetch: fetch_ }
 }

@@ -49,3 +49,22 @@ export const MARKETS = [
 ]
 
 export const ALL_SYMBOLS = MARKETS.map(m => m.symbol).join(',')
+
+// Maps numeric ISO-3166 country id → single representative market id
+// Used by GlobeMap to colour countries by market performance
+export const COUNTRY_MARKET_MAP = {
+  '840': 'sp500',    // USA
+  '356': 'nifty',    // India
+  '826': 'ftse',     // United Kingdom
+  '276': 'dax',      // Germany
+  '250': 'cac40',    // France
+  '392': 'nikkei',   // Japan
+  '344': 'hsi',      // Hong Kong
+  '156': 'sse',      // China
+  '410': 'kospi',    // South Korea
+  '36':  'asx',      // Australia
+  '124': 'tsx',      // Canada
+  '76':  'bovespa',  // Brazil
+  '702': 'sti',      // Singapore
+  '710': 'jse',      // South Africa
+}

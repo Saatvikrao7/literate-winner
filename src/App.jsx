@@ -15,13 +15,12 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0])
 
   const { articles, loading, error, lastUpdated, refetch } = useNews(selectedRegion, selectedCategory)
-  const { data: marketData, loading: mktLoading, error: mktError, lastUpdated: mktUpdated, refetch: mktRefetch } = useMarketData()
+  const { data: marketData, loading: mktLoading, lastUpdated: mktUpdated, refetch: mktRefetch } = useMarketData()
 
   const Sidebar = () => mode === 'markets' ? (
     <MarketPanel
       data={marketData}
       loading={mktLoading}
-      error={mktError}
       lastUpdated={mktUpdated}
       refetch={mktRefetch}
     />

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import Globe from 'react-globe.gl'
 import * as topojson from 'topojson-client'
 import { COUNTRY_REGION_MAP, REGIONS } from '../data/regions'
+import { COUNTRY_MARKET_MAP } from '../data/markets'
 import { CITIES } from '../data/cities'
 import { CONFLICT_ZONES, CONFLICT_ARCS } from '../data/events'
 import { useConflictEvents } from '../hooks/useConflictEvents'
@@ -170,6 +171,57 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, ma
     </div>`
   }, [])
 
+  // ── Markets mode: country heatmap colour ─────────────────────────────────
+  const getMarketCapColor = useCallback(d => {
+    if (!marketData || marketData.length === 0) return 'rgba(12,12,26,0.9)'
+    const mid = COUNTRY_MARKET_MAP[String(d.id)]
+    if (!mid) return 'rgba(10,10,22,0.88)'
+    const m = marketData.find(x => x.id === mid)
+    if (!m || m.pct == null) return 'rgba(12,12,26,0.9)'
+    const i = Math.min(Math.abs(m.pct) / 3, 1) // full intensity at ±3 %
+    if (m.up) return `rgba(8,${Math.round(90 + 110*i)},${Math.round(40 + 30*i)},${0.55 + 0.35*i})`
+    return `rgba(${Math.round(120 + 110*i)},${Math.round(8 + 8*i)},${Math.round(8 + 12*i)},${0.55 + 0.35*i})`
+  }, [marketData])
+
+  const getMarketAltitude = useCallback(d => {
+    if (!marketData || marketData.length === 0) return 0.002
+    const mid = COUNTRY_MARKET_MAP[String(d.id)]
+    if (!mid) return 0.002
+    const m = marketData.find(x => x.id === mid)
+    if (!m || m.pct == null) return 0.002
+    return Math.min(Math.abs(m.pct) / 100 * 10, 0.28) + 0.006
+  }, [marketData])
+
+  // Floating HTML price labels (major indices only)
+  const marketLabels = mode === 'markets' && marketData?.length > 0
+    ? marketData.filter(m => m.importance >= 4)
+    : []
+
+  const makeMarketLabel = useCallback(d => {
+    const el = document.createElement('div')
+    const color = d.up === true ? '#22c55e' : d.up === false ? '#ef4444' : '#6b7280'
+    el.style.cssText = [
+      'background:rgba(4,4,16,0.88)',
+      `border:1px solid ${color}44`,
+      'border-radius:5px',
+      'padding:3px 7px',
+      'font-family:ui-monospace,monospace',
+      'font-size:9px',
+      'color:#fff',
+      'pointer-events:none',
+      'white-space:nowrap',
+      'line-height:1.5',
+      'box-shadow:0 0 8px ' + color + '33',
+    ].join(';')
+    el.innerHTML = `<div style="font-weight:700;letter-spacing:0.03em">${d.name}</div><div style="color:${color};font-weight:600">${d.pctStr} &nbsp;${d.priceStr}</div>`
+    return el
+  }, [])
+
+  // Rings for open markets in markets mode
+  const marketRings = mode === 'markets' && marketData?.length > 0
+    ? marketData.filter(m => m.state === 'REGULAR' || m.state === 'PRE')
+    : []
+
   // ── Conflict zone rings (faster, angrier than capital rings) ─────────────
   const getConflictRingColor = useCallback(zone => {
     const r = parseInt(zone.color.slice(1,3), 16)
@@ -238,21 +290,29 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, ma
         atmosphereColor="#2a3f8f"
         atmosphereAltitude={0.22}
         polygonsData={countries.features}
-        polygonCapColor={getCapColor}
+        polygonCapColor={mode === 'markets' ? getMarketCapColor : getCapColor}
         polygonSideColor={() => 'rgba(0,0,40,0.6)'}
         polygonStrokeColor={() => '#05050f'}
-        polygonAltitude={getAltitude}
+        polygonAltitude={mode === 'markets' ? getMarketAltitude : getAltitude}
         polygonLabel={getLabel}
         onPolygonHover={setHoveredCountry}
         onPolygonClick={handleClick}
-        // ── News mode layers ──────────────────────────────────────────────
-        ringsData={mode !== 'markets' ? allRings : []}
+        // ── HTML floating labels (markets mode) ──────────────────────────
+        htmlElementsData={marketLabels}
+        htmlLat={d => d.lat}
+        htmlLng={d => d.lng}
+        htmlAltitude={0.18}
+        htmlElement={makeMarketLabel}
+        // ── Rings: conflict zones / capitals (news) or open markets ──────
+        ringsData={mode === 'markets' ? marketRings : allRings}
         ringLat={item => item.lat}
         ringLng={item => item.lng}
-        ringColor={getRingColor}
-        ringMaxRadius={getRingMaxRadius}
-        ringPropagationSpeed={getRingSpeed}
-        ringRepeatPeriod={getRingRepeat}
+        ringColor={mode === 'markets'
+          ? d => t => `rgba(34,197,94,${(1-t) * (d.state === 'PRE' ? 0.4 : 0.7)})`
+          : getRingColor}
+        ringMaxRadius={mode === 'markets' ? 2.5 : getRingMaxRadius}
+        ringPropagationSpeed={mode === 'markets' ? 1.0 : getRingSpeed}
+        ringRepeatPeriod={mode === 'markets' ? 1600 : getRingRepeat}
         ringAltitude={0.001}
         arcsData={mode !== 'markets' ? activeArcs : []}
         arcStartLat={a => a.startLat}
