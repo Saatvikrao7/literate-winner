@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Radio, Globe } from 'lucide-react'
+import { Radio, Globe, TrendingUp } from 'lucide-react'
 import { REGIONS } from '../data/regions'
 
 const TICKER_ITEMS = [
@@ -9,7 +9,7 @@ const TICKER_ITEMS = [
   'Scroll and zoom the map to explore regions',
 ]
 
-export default function Header({ selectedRegion }) {
+export default function Header({ selectedRegion, mode, onModeChange }) {
   const [tickerIdx, setTickerIdx] = useState(0)
   const [time, setTime] = useState(new Date())
 
@@ -26,34 +26,55 @@ export default function Header({ selectedRegion }) {
   const regionInfo = REGIONS.find(r => r.id === selectedRegion.id)
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-panel/80 backdrop-blur-sm flex-shrink-0 z-10">
-      {/* Left: Logo */}
-      <div className="flex items-center gap-2">
+    <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-panel/80 backdrop-blur-sm flex-shrink-0 z-10 gap-3">
+      {/* Logo */}
+      <div className="flex items-center gap-2 flex-shrink-0">
         <Globe size={16} className="text-indigo-400" />
         <span className="font-mono text-sm font-semibold tracking-tight text-white">
           World<span className="text-indigo-400">Pulse</span>
         </span>
       </div>
 
-      {/* Center: Ticker */}
-      <div className="hidden sm:flex items-center gap-2 flex-1 mx-6 overflow-hidden">
-        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono text-[10px] flex-shrink-0">
-          <Radio size={8} className="animate-pulse" />
-          LIVE
-        </span>
-        <div className="overflow-hidden relative flex-1">
-          <p
-            key={tickerIdx}
-            className="text-[11px] font-mono text-white/40 truncate animate-fade-in"
-          >
+      {/* Mode tabs */}
+      <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 flex-shrink-0">
+        <button
+          onClick={() => onModeChange('news')}
+          className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all"
+          style={mode === 'news'
+            ? { background: '#6366f1', color: '#fff' }
+            : { color: 'rgba(255,255,255,0.4)' }}
+        >
+          <Globe size={11} />
+          World News
+        </button>
+        <button
+          onClick={() => onModeChange('markets')}
+          className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all"
+          style={mode === 'markets'
+            ? { background: '#16a34a', color: '#fff' }
+            : { color: 'rgba(255,255,255,0.4)' }}
+        >
+          <TrendingUp size={11} />
+          Markets
+        </button>
+      </div>
+
+      {/* Center: Ticker (news mode only) */}
+      {mode === 'news' && (
+        <div className="hidden sm:flex items-center gap-2 flex-1 overflow-hidden">
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono text-[10px] flex-shrink-0">
+            <Radio size={8} className="animate-pulse" />
+            LIVE
+          </span>
+          <p key={tickerIdx} className="text-[11px] font-mono text-white/40 truncate animate-fade-in">
             {TICKER_ITEMS[tickerIdx]}
           </p>
         </div>
-      </div>
+      )}
 
-      {/* Right: Region pill + clock */}
-      <div className="flex items-center gap-3">
-        {regionInfo && regionInfo.id !== 'all' && (
+      {/* Right: region pill + clock */}
+      <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+        {mode === 'news' && regionInfo && regionInfo.id !== 'all' && (
           <span
             className="hidden sm:inline-block px-2 py-0.5 rounded font-mono text-[10px] font-semibold text-black"
             style={{ background: regionInfo.color }}

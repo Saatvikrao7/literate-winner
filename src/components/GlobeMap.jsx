@@ -9,7 +9,7 @@ import { MissilesLayer } from './MissilesLayer'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
-export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
+export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, marketData }) {
   const globeRef = useRef()
   const containerRef = useRef()
   const [countries, setCountries] = useState({ features: [] })
@@ -226,8 +226,8 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
-      {/* 3D missile objects injected directly into the Three.js scene */}
-      <MissilesLayer arcs={activeArcs} globeRef={globeRef} />
+      {/* Missiles only in news mode */}
+      {mode !== 'markets' && <MissilesLayer arcs={activeArcs} globeRef={globeRef} />}
       <Globe
         ref={initGlobe}
         width={size.w}
@@ -245,8 +245,8 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         polygonLabel={getLabel}
         onPolygonHover={setHoveredCountry}
         onPolygonClick={handleClick}
-        // Unified rings: conflict zones (fast/red) + capital cities (slow/regional color)
-        ringsData={allRings}
+        // ── News mode layers ──────────────────────────────────────────────
+        ringsData={mode !== 'markets' ? allRings : []}
         ringLat={item => item.lat}
         ringLng={item => item.lng}
         ringColor={getRingColor}
@@ -254,8 +254,7 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         ringPropagationSpeed={getRingSpeed}
         ringRepeatPeriod={getRingRepeat}
         ringAltitude={0.001}
-        // Faint trajectory paths — 3D rocket shapes are rendered by MissilesLayer below
-        arcsData={activeArcs}
+        arcsData={mode !== 'markets' ? activeArcs : []}
         arcStartLat={a => a.startLat}
         arcStartLng={a => a.startLng}
         arcEndLat={a => a.endLat}
@@ -267,14 +266,27 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect }) {
         arcDashGap={0}
         arcDashAnimateTime={0}
         arcLabel={a => `<div style="background:rgba(5,5,15,0.92);border:1px solid rgba(255,140,0,0.3);border-radius:5px;padding:3px 8px;font-family:monospace;font-size:10px;color:#fff;pointer-events:none">🚀 ${a.label}</div>`}
-        // City dots
-        pointsData={CITIES}
-        pointLat={c => c.lat}
-        pointLng={c => c.lng}
-        pointColor={getCityColor}
-        pointRadius={getCityRadius}
-        pointAltitude={getCityAltitude}
-        pointLabel={getCityLabel}
+        // ── Points: city dots (news) or market bars (markets) ─────────────
+        pointsData={mode === 'markets' ? marketData : CITIES}
+        pointLat={d => d.lat}
+        pointLng={d => d.lng}
+        pointColor={d => mode === 'markets'
+          ? (d.up === true ? '#22c55e' : d.up === false ? '#ef4444' : '#6b7280')
+          : getCityColor(d)}
+        pointRadius={d => mode === 'markets'
+          ? d.importance * 0.35
+          : getCityRadius(d)}
+        pointAltitude={d => mode === 'markets'
+          ? (d.pct != null ? Math.min(Math.abs(d.pct) / 100 * 6, 0.5) + 0.04 : 0.04)
+          : getCityAltitude(d)}
+        pointLabel={d => mode === 'markets'
+          ? `<div style="background:rgba(5,5,15,0.95);border:1px solid ${d.up ? '#22c55e44' : '#ef444444'};border-radius:7px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#fff;pointer-events:none;white-space:nowrap">
+              <div style="font-weight:700">${d.flag} ${d.name}</div>
+              <div style="font-size:13px;font-weight:600;color:${d.up ? '#22c55e' : '#ef4444'};margin-top:2px">${d.priceStr} <span style="font-size:10px">${d.currency}</span></div>
+              <div style="font-size:10px;color:${d.up ? '#22c55e' : '#ef4444'}">${d.changeStr} (${d.pctStr})</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">${d.country}</div>
+            </div>`
+          : getCityLabel(d)}
         pointResolution={8}
       />
 
