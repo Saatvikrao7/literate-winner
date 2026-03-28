@@ -18,10 +18,13 @@ export function useMarketData() {
     setLoading(true)
     setError(null)
     try {
-      // Vite proxies /yf → https://query1.finance.yahoo.com
-      const url = `/yf/v7/finance/quote?symbols=${encodeURIComponent(ALL_SYMBOLS)}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketPreviousClose,shortName,currency,marketState`
+      // Vite dev server handles cookie+crumb auth server-side at /api/markets
+      const url = `/api/markets?symbols=${encodeURIComponent(ALL_SYMBOLS)}`
       const res  = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
       const json = await res.json()
 
       const quotes = json.quoteResponse?.result ?? []
