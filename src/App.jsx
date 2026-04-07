@@ -7,6 +7,7 @@ const GlobeMap = lazy(() => import('./components/GlobeMap'))
 import NewsPanel from './components/NewsPanel'
 import MarketPanel from './components/MarketPanel'
 import Header from './components/Header'
+import TickerBar from './components/TickerBar'
 import CategoryBar from './components/CategoryBar'
 
 export default function App() {
@@ -38,7 +39,15 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-surface text-white overflow-hidden">
-      <Header selectedRegion={selectedRegion} mode={mode} onModeChange={setMode} />
+      <Header
+        selectedRegion={selectedRegion}
+        mode={mode}
+        onModeChange={setMode}
+        marketData={marketData}
+      />
+
+      {/* Scrolling ticker — markets mode only */}
+      {mode === 'markets' && <TickerBar data={marketData} />}
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden min-h-0">

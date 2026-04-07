@@ -1,90 +1,116 @@
 import { useState, useEffect } from 'react'
-import { Radio, Globe, TrendingUp } from 'lucide-react'
-import { REGIONS } from '../data/regions'
+import { Globe, TrendingUp, TrendingDown, Radio } from 'lucide-react'
 
-const TICKER_ITEMS = [
-  'Click any country on the map to filter news by region',
-  'Use the category bar below to filter by topic',
-  'Powered by The Guardian open platform API',
-  'Scroll and zoom the map to explore regions',
-]
-
-export default function Header({ selectedRegion, mode, onModeChange }) {
-  const [tickerIdx, setTickerIdx] = useState(0)
+export default function Header({ selectedRegion, mode, onModeChange, marketData }) {
   const [time, setTime] = useState(new Date())
-
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
 
-  useEffect(() => {
-    const id = setInterval(() => setTickerIdx(i => (i + 1) % TICKER_ITEMS.length), 6000)
-    return () => clearInterval(id)
-  }, [])
-
-  const regionInfo = REGIONS.find(r => r.id === selectedRegion.id)
+  // Market summary numbers for header
+  const upCount   = marketData?.filter(m => m.up === true).length  ?? 0
+  const downCount = marketData?.filter(m => m.up === false).length ?? 0
+  const avgPct    = marketData?.length
+    ? (marketData.reduce((s, m) => s + (m.pct ?? 0), 0) / marketData.length)
+    : null
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-panel/80 backdrop-blur-sm flex-shrink-0 z-10 gap-3">
+    <header className="flex items-center justify-between px-4 border-b border-border flex-shrink-0 z-10 gap-3"
+      style={{ height: 46, background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(12px)' }}>
+
       {/* Logo */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Globe size={16} className="text-indigo-400" />
-        <span className="font-mono text-sm font-semibold tracking-tight text-white">
-          World<span className="text-indigo-400">Pulse</span>
+        <div style={{
+          width: 26, height: 26, borderRadius: 7, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Globe size={14} color="#fff" />
+        </div>
+        <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' }}>
+          World<span style={{ color: '#818cf8' }}>Pulse</span>
         </span>
       </div>
 
       {/* Mode tabs */}
-      <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 flex-shrink-0">
+      <div className="flex items-center gap-0.5 flex-shrink-0"
+        style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 3 }}>
         <button
           onClick={() => onModeChange('news')}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all"
-          style={mode === 'news'
-            ? { background: '#6366f1', color: '#fff' }
-            : { color: 'rgba(255,255,255,0.4)' }}
+          className="flex items-center gap-1.5 transition-all"
+          style={{
+            padding: '4px 12px', borderRadius: 8,
+            fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+            ...(mode === 'news'
+              ? { background: 'linear-gradient(135deg,#4f46e5,#6366f1)', color: '#fff', boxShadow: '0 2px 8px #4f46e540' }
+              : { color: 'rgba(255,255,255,0.38)' }),
+          }}
         >
-          <Globe size={11} />
+          <Globe size={10} />
           World News
         </button>
         <button
           onClick={() => onModeChange('markets')}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all"
-          style={mode === 'markets'
-            ? { background: '#16a34a', color: '#fff' }
-            : { color: 'rgba(255,255,255,0.4)' }}
+          className="flex items-center gap-1.5 transition-all"
+          style={{
+            padding: '4px 12px', borderRadius: 8,
+            fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+            ...(mode === 'markets'
+              ? { background: 'linear-gradient(135deg,#15803d,#22c55e)', color: '#fff', boxShadow: '0 2px 8px #22c55e40' }
+              : { color: 'rgba(255,255,255,0.38)' }),
+          }}
         >
-          <TrendingUp size={11} />
+          <TrendingUp size={10} />
           Markets
         </button>
       </div>
 
-      {/* Center: Ticker (news mode only) */}
-      {mode === 'news' && (
-        <div className="hidden sm:flex items-center gap-2 flex-1 overflow-hidden">
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono text-[10px] flex-shrink-0">
-            <Radio size={8} className="animate-pulse" />
-            LIVE
-          </span>
-          <p key={tickerIdx} className="text-[11px] font-mono text-white/40 truncate animate-fade-in">
-            {TICKER_ITEMS[tickerIdx]}
-          </p>
-        </div>
-      )}
-
-      {/* Right: region pill + clock */}
-      <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-        {mode === 'news' && regionInfo && regionInfo.id !== 'all' && (
-          <span
-            className="hidden sm:inline-block px-2 py-0.5 rounded font-mono text-[10px] font-semibold text-black"
-            style={{ background: regionInfo.color }}
-          >
-            {regionInfo.name}
-          </span>
+      {/* Center context */}
+      <div className="hidden sm:flex items-center gap-3 flex-1 overflow-hidden">
+        {mode === 'news' ? (
+          <>
+            <span className="flex items-center gap-1.5 text-[10px] font-mono"
+              style={{ color: '#22c55e', background: '#22c55e12', border: '1px solid #22c55e25', borderRadius: 4, padding: '2px 7px', flexShrink: 0 }}>
+              <span className="pulse-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              LIVE NEWS
+            </span>
+            {selectedRegion.id !== 'all' && (
+              <span className="text-[11px] font-mono truncate" style={{ color: selectedRegion.color }}>
+                {selectedRegion.name}
+              </span>
+            )}
+          </>
+        ) : (
+          marketData?.length > 0 && (
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono"
+                style={{ color: '#22c55e', background: '#22c55e12', border: '1px solid #22c55e25', borderRadius: 4, padding: '2px 7px' }}>
+                <span className="pulse-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                LIVE MARKETS
+              </span>
+              <div className="flex items-center gap-3 text-[11px] font-mono">
+                <span style={{ color: '#22c55e' }} className="flex items-center gap-1">
+                  <TrendingUp size={10} /> {upCount} up
+                </span>
+                <span style={{ color: '#ef4444' }} className="flex items-center gap-1">
+                  <TrendingDown size={10} /> {downCount} down
+                </span>
+                {avgPct != null && (
+                  <span style={{ color: avgPct >= 0 ? '#22c55e' : '#ef4444', fontWeight: 700 }}>
+                    avg {avgPct >= 0 ? '+' : ''}{avgPct.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            </div>
+          )
         )}
-        <span className="font-mono text-[11px] text-white/30">
-          {time.toUTCString().slice(17, 25)} UTC
-        </span>
+      </div>
+
+      {/* UTC clock */}
+      <div className="flex-shrink-0 ml-auto"
+        style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.05em' }}>
+        {time.toUTCString().slice(17, 25)}
+        <span style={{ color: 'rgba(255,255,255,0.18)', marginLeft: 3 }}>UTC</span>
       </div>
     </header>
   )

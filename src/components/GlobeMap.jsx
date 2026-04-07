@@ -287,7 +287,7 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, ma
         backgroundColor="rgba(0,0,0,0)"
         globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
         bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-        atmosphereColor="#2a3f8f"
+        atmosphereColor={mode === 'markets' ? '#0f4f1a' : '#2a3f8f'}
         atmosphereAltitude={0.22}
         polygonsData={countries.features}
         polygonCapColor={mode === 'markets' ? getMarketCapColor : getCapColor}
@@ -350,8 +350,9 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, ma
         pointResolution={8}
       />
 
-      {/* Region legend */}
-      <div className="absolute bottom-4 left-4 flex flex-col gap-1 bg-black/50 backdrop-blur-md rounded-xl p-3 pointer-events-none">
+      {/* Region legend — hidden in markets mode */}
+      <div className="absolute bottom-4 left-4 flex flex-col gap-1 bg-black/50 backdrop-blur-md rounded-xl p-3 pointer-events-none"
+        style={{ display: mode === 'markets' ? 'none' : undefined }}>
         <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1">Regions</span>
         {REGIONS.filter(r => r.id !== 'all').map(r => {
           const active = selectedRegion.id === 'all' || r.id === selectedRegion.id
@@ -376,24 +377,36 @@ export default memo(function GlobeMap({ selectedRegion, onRegionSelect, mode, ma
         })}
       </div>
 
-      {/* Conflict event status + hint */}
+      {/* Bottom-right: mode-dependent status */}
       <div className="absolute bottom-4 right-4 text-right pointer-events-none space-y-1">
-        <div className="flex items-center justify-end gap-1.5">
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{
-              background: conflictStatus === 'ready' ? '#22c55e' : conflictStatus === 'error' ? '#ef4444' : '#eab308',
-              boxShadow: conflictStatus === 'ready' ? '0 0 4px #22c55e' : 'none',
-            }}
-          />
-          <span className="text-[9px] font-mono text-white/25">
-            {conflictStatus === 'ready'   ? `${activeZones.length} live conflict zones` :
-             conflictStatus === 'loading' ? 'updating events…' :
-             conflictStatus === 'error'   ? 'using cached events' : ''}
-          </span>
-        </div>
+        {mode === 'markets' && marketData?.length > 0 ? (
+          <div className="space-y-1">
+            <div className="flex items-center justify-end gap-2 text-[9px] font-mono">
+              <span style={{ color: '#22c55e' }}>▲ {marketData.filter(m => m.up === true).length} up</span>
+              <span style={{ color: '#ef4444' }}>▼ {marketData.filter(m => m.up === false).length} down</span>
+            </div>
+            <div className="text-[9px] font-mono text-white/20">
+              hover index for details
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-1.5">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background: conflictStatus === 'ready' ? '#22c55e' : conflictStatus === 'error' ? '#ef4444' : '#eab308',
+                boxShadow: conflictStatus === 'ready' ? '0 0 4px #22c55e' : 'none',
+              }}
+            />
+            <span className="text-[9px] font-mono text-white/25">
+              {conflictStatus === 'ready'   ? `${activeZones.length} live conflict zones` :
+               conflictStatus === 'loading' ? 'updating events…' :
+               conflictStatus === 'error'   ? 'using cached events' : ''}
+            </span>
+          </div>
+        )}
         <div className="text-[10px] font-mono text-white/20">
-          drag to spin · scroll to zoom<br />click country to filter
+          drag to spin · scroll to zoom
         </div>
       </div>
     </div>

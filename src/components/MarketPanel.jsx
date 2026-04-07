@@ -1,78 +1,145 @@
-import { RefreshCw, TrendingUp, TrendingDown, Minus, Clock, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { RefreshCw, TrendingUp, TrendingDown, Clock, Zap, Activity } from 'lucide-react'
+import { isMarketOpen, getMarketLocalTime, getMarketTimezone } from '../utils/marketHours'
 
-const STATE_LABEL = { REGULAR: 'OPEN', PRE: 'PRE', POST: 'AFTER', CLOSED: 'CLOSED', SIMULATED: 'SIM' }
-const STATE_COLOR = { REGULAR: '#22c55e', PRE: '#eab308', POST: '#f97316', CLOSED: '#6b7280', SIMULATED: '#eab308' }
-
-function Sparkline({ history, up }) {
-  if (!history || history.length < 2) return <div style={{ width: 52, height: 22 }} />
+// ── Sparkline (area + line) ──────────────────────────────────────────────────
+function AreaSparkline({ history, up }) {
+  if (!history || history.length < 2) return <div style={{ width: 58, height: 24 }} />
+  const W = 58, H = 24
   const min = Math.min(...history)
   const max = Math.max(...history)
-  const range = max - min || 1
-  const W = 52, H = 22
-  const pts = history
-    .map((v, i) => `${(i / (history.length - 1)) * W},${H - ((v - min) / range) * (H - 2) - 1}`)
-    .join(' ')
+  const range = max - min || 0.001
+  const toX = i => (i / (history.length - 1)) * W
+  const toY = v => H - 2 - ((v - min) / range) * (H - 4)
+  const linePts = history.map((v, i) => `${toX(i)},${toY(v)}`).join(' ')
+  const areaPath = `M0,${toY(history[0])} ` +
+    history.map((v, i) => `L${toX(i)},${toY(v)}`).join(' ') +
+    ` L${W},${H} L0,${H} Z`
   const color = up === true ? '#22c55e' : up === false ? '#ef4444' : '#6b7280'
+  const gid = `sg${up ? 'u' : 'd'}`
   return (
-    <svg width={W} height={H} style={{ overflow: 'visible', flexShrink: 0 }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5"
-        strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+    <svg width={W} height={H} style={{ flexShrink: 0, overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gid})`} />
+      <polyline points={linePts} fill="none" stroke={color}
+        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
     </svg>
   )
 }
 
-function MarketRow({ m }) {
+// ── Performance bar ───────────────────────────────────────────────────────────
+function PerfBar({ pct, up }) {
+  const width = Math.min(Math.abs(pct ?? 0) / 4 * 100, 100)
+  const color = up === true ? '#22c55e' : up === false ? '#ef4444' : '#6b7280'
+  return (
+    <div style={{ width: 36, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ width: `${width}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.6s ease' }} />
+    </div>
+  )
+}
+
+// ── Single market row ─────────────────────────────────────────────────────────
+function MarketRow({ m, now }) {
   const up    = m.up === true
   const down  = m.up === false
   const color = up ? '#22c55e' : down ? '#ef4444' : '#6b7280'
-  const stateColor = STATE_COLOR[m.state] ?? '#6b7280'
+  const open  = isMarketOpen(m.id, now)
+  const localTime = getMarketLocalTime(m.id, now)
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group">
-      <span className="text-sm flex-shrink-0 leading-none">{m.flag}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-semibold text-white/90 truncate">{m.name}</span>
-          <span className="text-[8px] font-mono px-1 rounded leading-4"
-            style={{ background: stateColor + '22', color: stateColor }}>
-            {STATE_LABEL[m.state] ?? m.state}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 8, transition: 'background 0.15s' }}
+      className="hover:bg-white/5 group">
+
+      {/* Flag + name */}
+      <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{m.flag}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.88)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'system-ui' }}>
+            {m.name}
+          </span>
+          <span style={{
+            fontSize: 8, fontFamily: 'monospace', padding: '1px 4px', borderRadius: 3,
+            background: open ? '#22c55e18' : '#6b728018',
+            color: open ? '#22c55e' : '#6b7280',
+            border: `1px solid ${open ? '#22c55e30' : '#6b728030'}`,
+            flexShrink: 0,
+          }}>
+            {open ? 'OPEN' : 'CLOSED'}
           </span>
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[10px] font-mono text-white/30">{m.country}</span>
-          <span className="text-[10px] font-mono font-semibold text-white/70">{m.priceStr}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.28)' }}>{m.country}</span>
+          {localTime && <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.22)' }}>{localTime}</span>}
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{m.priceStr}</span>
         </div>
       </div>
 
-      {/* Sparkline */}
-      <Sparkline history={m.history} up={m.up} />
+      {/* Perf bar */}
+      <PerfBar pct={m.pct} up={m.up} />
 
-      {/* Change */}
-      <div className="text-right flex-shrink-0 w-16">
-        <div className="flex items-center justify-end gap-0.5">
-          {up   && <TrendingUp  size={9} style={{ color }} />}
-          {down && <TrendingDown size={9} style={{ color }} />}
-          {!up && !down && <Minus size={9} className="text-white/30" />}
-          <span className="text-[11px] font-mono font-semibold" style={{ color }}>{m.pctStr}</span>
+      {/* Sparkline */}
+      <AreaSparkline history={m.history} up={m.up} />
+
+      {/* % change */}
+      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 48 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+          {up   && <TrendingUp  size={9} color={color} />}
+          {down && <TrendingDown size={9} color={color} />}
+          <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color }}>{m.pctStr}</span>
         </div>
-        <div className="text-[9px] font-mono text-white/30 text-right">{m.changeStr}</div>
+        <div style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)', textAlign: 'right' }}>{m.changeStr}</div>
       </div>
     </div>
   )
 }
 
-function MoverCard({ m, rank }) {
+// ── Top mover card ────────────────────────────────────────────────────────────
+function MoverCard({ m }) {
   const up    = m.up === true
   const color = up ? '#22c55e' : '#ef4444'
   return (
-    <div className="flex-1 min-w-0 p-2 rounded-lg border"
-      style={{ borderColor: color + '30', background: color + '0a' }}>
-      <div className="flex items-center gap-1 mb-1">
-        <span className="text-xs leading-none">{m.flag}</span>
-        <span className="text-[9px] font-mono text-white/50 truncate">{m.name}</span>
+    <div style={{
+      flex: 1, padding: '7px 8px', borderRadius: 8,
+      background: color + '0c', border: `1px solid ${color}28`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+        <span style={{ fontSize: 12 }}>{m.flag}</span>
+        <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
       </div>
-      <div className="text-[12px] font-mono font-bold" style={{ color }}>{m.pctStr}</div>
-      <div className="text-[9px] font-mono text-white/30">{m.priceStr}</div>
+      <div style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 800, color, letterSpacing: '-0.01em' }}>{m.pctStr}</div>
+      <div style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.28)', marginTop: 1 }}>{m.priceStr}</div>
+    </div>
+  )
+}
+
+// ── Group label with regional clock ──────────────────────────────────────────
+const REGION_TZ = {
+  '🇺🇸 Americas':    'America/New_York',
+  '🇮🇳 South Asia':  'Asia/Kolkata',
+  '🌍 Europe':       'Europe/London',
+  '🌏 Asia Pacific': 'Asia/Tokyo',
+  '🌍 Africa':       'Africa/Johannesburg',
+}
+
+function GroupHeader({ label, now }) {
+  const tz = REGION_TZ[label]
+  const localTime = tz ? new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(now) : null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px 3px' }}>
+      <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        {label}
+      </span>
+      {localTime && (
+        <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Clock size={8} />
+          {localTime}
+        </span>
+      )}
     </div>
   )
 }
@@ -85,120 +152,141 @@ const GROUPS = [
   { label: '🌍 Africa',       ids: ['jse'] },
 ]
 
+// ── Main panel ────────────────────────────────────────────────────────────────
 export default function MarketPanel({ data, loading, lastUpdated, refetch }) {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
   const isSimulated = data.length > 0 && data[0]?.simulated
+  const upCount     = data.filter(m => m.up === true).length
+  const downCount   = data.filter(m => m.up === false).length
+  const openCount   = data.filter(m => isMarketOpen(m.id, now)).length
+  const total       = upCount + downCount || 1
+  const bullish     = upCount / total
+  const avgPct      = data.length
+    ? data.reduce((s, m) => s + (m.pct ?? 0), 0) / data.length
+    : null
 
-  // Sentiment
-  const upCount   = data.filter(m => m.up === true).length
-  const downCount = data.filter(m => m.up === false).length
-  const total     = upCount + downCount || 1
-  const bullish   = upCount / total
-
-  // Top movers
   const sorted  = [...data].filter(m => m.pct != null).sort((a, b) => b.pct - a.pct)
   const gainers = sorted.slice(0, 3)
   const losers  = sorted.slice(-3).reverse()
 
-  // Weighted avg change (equally-weighted for simplicity)
-  const avgPct = data.length
-    ? (data.reduce((s, m) => s + (m.pct ?? 0), 0) / data.length).toFixed(2)
-    : null
-
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0a0a16' }}>
 
       {/* ── Header ── */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={14} className="text-green-400" />
-          <span className="text-xs font-mono text-white/70 font-semibold">Global Markets</span>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 14px', borderBottom: '1px solid #1a1a2e', flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Activity size={13} color="#22c55e" />
+          <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>
+            Global Markets
+          </span>
           {isSimulated && (
-            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded"
-              style={{ background: '#eab30818', color: '#eab308', border: '1px solid #eab30830' }}>
-              SIMULATED
-            </span>
+            <span style={{
+              fontSize: 8, fontFamily: 'monospace', padding: '2px 5px', borderRadius: 3,
+              background: '#eab30815', color: '#eab308', border: '1px solid #eab30828',
+            }}>SIM</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {openCount > 0 && (
+            <span style={{ fontSize: 9, fontFamily: 'monospace', color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span className="pulse-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              {openCount} open
+            </span>
+          )}
           {lastUpdated && (
-            <span className="flex items-center gap-1 text-[10px] font-mono text-white/20">
-              <Clock size={9} />
+            <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Clock size={8} />
               {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
           <button onClick={refetch} disabled={loading}
-            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors disabled:opacity-40">
+            style={{ padding: 4, borderRadius: 5, background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', display: 'flex' }}
+            className="hover:bg-white/5 transition-colors disabled:opacity-40">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* ── Sentiment strip ── */}
+      {/* ── Sentiment bar ── */}
       {data.length > 0 && (
-        <div className="px-4 py-2.5 border-b border-border flex-shrink-0 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[9px] font-mono text-white/35 uppercase tracking-wider">Sentiment</span>
-              <span className="text-[9px] font-mono text-green-400">{upCount} up</span>
-              <span className="text-[9px] font-mono text-red-400">{downCount} down</span>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #1a1a2e', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sentiment</span>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#22c55e' }}>▲ {upCount}</span>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#ef4444' }}>▼ {downCount}</span>
             </div>
             {avgPct != null && (
-              <span className="text-[10px] font-mono font-semibold"
-                style={{ color: +avgPct >= 0 ? '#22c55e' : '#ef4444' }}>
-                avg {+avgPct >= 0 ? '+' : ''}{avgPct}%
+              <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: avgPct >= 0 ? '#22c55e' : '#ef4444' }}>
+                {avgPct >= 0 ? '+' : ''}{avgPct.toFixed(2)}% avg
               </span>
             )}
           </div>
-          <div className="h-2 rounded-full overflow-hidden flex gap-px"
-            style={{ background: 'rgba(255,255,255,0.06)' }}>
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${bullish * 100}%`, background: 'linear-gradient(90deg,#16a34a,#22c55e)' }} />
-            <div className="h-full rounded-full flex-1 transition-all duration-700"
-              style={{ background: 'linear-gradient(90deg,#ef4444,#dc2626)' }} />
+          <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex' }}>
+            <div style={{
+              height: '100%', borderRadius: '3px 0 0 3px', transition: 'width 0.8s ease',
+              width: `${bullish * 100}%`,
+              background: 'linear-gradient(90deg,#15803d,#22c55e)',
+            }} />
+            <div style={{
+              height: '100%', flex: 1, borderRadius: '0 3px 3px 0',
+              background: 'linear-gradient(90deg,#ef4444,#dc2626)',
+            }} />
           </div>
         </div>
       )}
 
       {/* ── Top Movers ── */}
       {gainers.length > 0 && (
-        <div className="px-3 py-2.5 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Zap size={10} className="text-yellow-400" />
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wider">Top Movers</span>
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid #1a1a2e', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+            <Zap size={10} color="#facc15" />
+            <span style={{ fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)' }}>
+              Top Movers
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <div className="text-[8px] font-mono text-green-400/60 uppercase tracking-wider px-0.5">Gainers</div>
-              {gainers.map((m, i) => <MoverCard key={m.id} m={m} rank={i+1} />)}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 8, fontFamily: 'monospace', color: '#22c55e60', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Gainers</span>
+              {gainers.map(m => <MoverCard key={m.id} m={m} />)}
             </div>
-            <div className="space-y-1.5">
-              <div className="text-[8px] font-mono text-red-400/60 uppercase tracking-wider px-0.5">Losers</div>
-              {losers.map((m, i) => <MoverCard key={m.id} m={m} rank={i+1} />)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 8, fontFamily: 'monospace', color: '#ef444460', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Losers</span>
+              {losers.map(m => <MoverCard key={m.id} m={m} />)}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Index list ── */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin py-1">
-        {loading && data.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 gap-3">
-            <RefreshCw size={16} className="text-white/20 animate-spin" />
-            <span className="text-xs font-mono text-white/25">Loading indices…</span>
-          </div>
-        )}
+      {/* ── Loading ── */}
+      {loading && data.length === 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 160, gap: 10 }}>
+          <RefreshCw size={16} color="rgba(255,255,255,0.15)" className="animate-spin" />
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(255,255,255,0.2)' }}>Loading indices…</span>
+        </div>
+      )}
+
+      {/* ── Indices list ── */}
+      <div style={{ flex: 1, overflowY: 'auto' }} className="scrollbar-thin">
         {GROUPS.map(group => {
           const items = group.ids.map(id => data.find(m => m.id === id)).filter(Boolean)
           if (!items.length) return null
           return (
-            <div key={group.label} className="mb-1">
-              <div className="px-4 pt-2 pb-0.5">
-                <span className="text-[8px] font-mono text-white/20 uppercase tracking-widest">{group.label}</span>
-              </div>
-              {items.map(m => <MarketRow key={m.id} m={m} />)}
+            <div key={group.label}>
+              <GroupHeader label={group.label} now={now} />
+              {items.map(m => <MarketRow key={m.id} m={m} now={now} />)}
             </div>
           )
         })}
+        <div style={{ height: 12 }} />
       </div>
     </div>
   )
